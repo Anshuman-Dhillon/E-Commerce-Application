@@ -1,21 +1,25 @@
 package com.ecommerceapp.backend.model;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "CUSTOMER")
 public class Customer {
+    @Id @Column(name = "CUSTOMERID") 
     private Long customerId;
-    private String Name;
-    private String address;
-    private String email;
-    private String phone_number;
-    private String username;
-    private String password;
+    
+    @Column(name = "NAME") 
+    private String name;
 
-    public Customer(){};
-
-    public Customer(Long customerId, String username, String password){
-        this.customerId = customerId;
-        this.username = username;
-        this.password = password;
-    }
-
+    @Column(name = "EMAIL") 
+    private String email; 
+    
+    // Default constructors
+    public Customer() {} 
+    
+    //  Getters  
+    public Long getCustomerId() { return customerId; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    
     
 }

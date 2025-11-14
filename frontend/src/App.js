@@ -1,53 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './Navbar';
+import ProductList from './ProductList';
+import ShoppingCart from './ShoppingCart'; 
+import OrderHistory from './OrderHistory'; 
+import './App.css'; 
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // State for the shopping cart items (shared across ProductList and ShoppingCart)
+  const [cartItems, setCartItems] = useState([]);
 
-  useEffect(() => {
-    // Fetch products using native fetch API
-    fetch('/api/products')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        // Handle case where data might be wrapped in an object
-        const productsArray = Array.isArray(data) ? data : (data.content || []);
-        setProducts(productsArray);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching products:', error);
-        setError(error.message);
-        setProducts([]); // Set empty array on error
-        setLoading(false);
-      });
-  }, []);
+  // Function to add a product to the cart 
+  const addToCart = (product) => {
+    // Adding/updating items in the shopping cart.**
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(item => item.productId === product.productId);
 
-  if (loading) return <div>Loading...</div>;
-  
-  if (error) return <div style={{color: 'red', padding: '20px'}}>Error: {error}</div>;
+      if (existingItem) {
+        // If product exists, increase quantity
+        return prevItems.map(item =>
+          item.productId === product.productId
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      } else {
+        // If product is new, add it with quantity 1
+        return [...prevItems, { 
+            ...product, 
+            quantity: 1,
+            
+        }];
+      }
+    });
+  };
+
+  // Calculate total items in the cart 
+  const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    <div className="App">
-      <h1>E-Commerce Store</h1>
-      <div className="product-grid">
-        {products.map(product => (
-          <div key={product.productId} className="product-card">
-            <h3>{product.productName}</h3>
-            <p>{product.description}</p>
-            <p className="price">${product.price}</p>
-            <p className="stock">Stock: {product.stock}</p>
-            <button>Add to Cart</button>
-          </div>
-        ))}
+    <Router>
+      {/* Pass totalItems count to Navbar */}
+      <Navbar totalItems={totalItems} /> 
+      <div className="content">
+        <Routes>
+          {/* Main Products Page*/}
+          <Route path="/" element={<ProductList addToCart={addToCart} />} />
+          
+          {/* Shopping Cart Page*/}
+          <Route path="/cart" element={<ShoppingCart cartItems={cartItems} setCartItems={setCartItems} />} />
+
+          {/* Orders/Transaction History Page */}
+          <Route path="/orders" element={<OrderHistory />} />
+        </Routes>
       </div>
-    </div>
+    </Router>
   );
 }
 
