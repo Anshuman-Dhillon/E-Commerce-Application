@@ -1,6 +1,10 @@
 package com.ecommerceapp.backend.model;
-import jakarta.persistence.*;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "ORDERS") 
@@ -29,4 +33,11 @@ public class Orders {
     public String getOrderStatus() { return orderStatus; }
     public Double getOrderAmount() { return orderAmount; }
     public Date getOrderDate() { return orderDate; }
+
+    // Setters
+    public void setOrderId(Long orderId) { this.orderId = orderId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
+    public void setOrderStatus(String orderStatus) { this.orderStatus = orderStatus; }
+    public void setOrderAmount(Double orderAmount) { this.orderAmount = orderAmount; }
+    public void setOrderDate(Date orderDate) { this.orderDate = orderDate; }
 }

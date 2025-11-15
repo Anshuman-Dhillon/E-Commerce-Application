@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchReportData } from './api';
 
-function ProductList({ addToCart }) { 
+function ProductList({ addToCart, user }) { 
   const [products, setProducts] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +27,14 @@ function ProductList({ addToCart }) {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2 style={{ textAlign: 'center' }}>Available Products</h2>
+      {user && user.name ? (
+        <div style={{ textAlign: 'center', marginBottom: '12px', color: '#333' }}>
+          <h3 style={{ margin: 0 }}>Welcome back, {user.name.split(' ')[0]}!</h3>
+          <p style={{ margin: '6px 0 0 0', color: '#666' }}>Here are the available products.</p>
+        </div>
+      ) : (
+        <h2 style={{ textAlign: 'center' }}>Available Products</h2>
+      )}
       <div style={productGridStyle}>
         {products.map(product => (
           <div key={product.productId} style={productCardStyle}>

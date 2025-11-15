@@ -1,7 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { fetchReportData } from './api';
 
-function ShoppingCart({ cartItems, setCartItems }) {
+function ShoppingCart({ cartItems, setCartItems, user }) {
+    const navigate = useNavigate();
     
     const removeFromCart = (productId) => {
         // remove items from SC
@@ -13,6 +15,39 @@ function ShoppingCart({ cartItems, setCartItems }) {
     const taxAmount = subtotal * taxRate;
     const orderTotal = subtotal + taxAmount;
     
+    const handleCheckout = async () => {
+        if (!user || !user.customerId) {
+            alert('You must be logged in to checkout.');
+            return;
+        }
+        if (cartItems.length === 0) {
+            alert('Your cart is empty.');
+            return;
+        }
+        // Calculate total
+        const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const taxRate = 0.13;
+        const orderTotal = subtotal + (subtotal * taxRate);
+
+        // Create order object
+        const orderPayload = {
+            customerId: user.customerId,
+            orderAmount: orderTotal,
+            orderStatus: 'Processing',
+            items: cartItems.map(item => ({ productId: item.productId, quantity: item.quantity }))
+        };
+        try {
+            await fetchReportData('/api/orders', {
+                method: 'POST',
+                body: JSON.stringify(orderPayload),
+            });
+            setCartItems([]);
+            navigate('/orders');
+        } catch (err) {
+            alert('Failed to place order. Try again.');
+        }
+    };
+
     return (
         <div style={containerStyle}>
             <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Your Shopping Cart</h2>
@@ -59,7 +94,7 @@ function ShoppingCart({ cartItems, setCartItems }) {
                             <span>Order Total:</span>
                             <span>${orderTotal.toFixed(2)}</span>
                         </div>
-                        <button style={checkoutButtonStyle}>Proceed to Checkout (Demo End)</button>
+                        <button style={checkoutButtonStyle} onClick={handleCheckout}>Purchase & View Orders</button>
                     </div>
                 </div>
             )}

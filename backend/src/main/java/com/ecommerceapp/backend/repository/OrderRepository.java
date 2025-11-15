@@ -1,15 +1,16 @@
 package com.ecommerceapp.backend.repository;
-import com.ecommerceapp.backend.model.Orders;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.ecommerceapp.backend.model.Orders;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Orders, Long> {
-    
-    /**
-     * Orders: Transaction History by Customer
-     */
-    // This query demonstrates essential SELECT/WHERE filtering for transaction history.**
     List<Orders> findByCustomerIdOrderByOrderDateDesc(Long customerId);
+    
+    @Query(value = "SELECT * FROM (SELECT * FROM ORDERS ORDER BY ORDERID DESC) WHERE ROWNUM = 1", nativeQuery = true)
+    Orders findTopByOrderByOrderIdDesc();
 }
