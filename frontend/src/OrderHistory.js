@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { fetchReportData } from './api';
 
-// Just for demo we use Customer ID 1. 
-const DEMO_CUSTOMER_ID = 1; 
-
-function OrderHistory() {
+function OrderHistory({ user }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch transaction history
-    fetchReportData(`/api/orders/history/${DEMO_CUSTOMER_ID}`)
+    if (!user || !user.customerId) return;
+    fetchReportData(`/api/orders/history/${user.customerId}`)
       .then(data => {
         if (Array.isArray(data)) { 
             setOrders(data);
@@ -25,16 +22,16 @@ function OrderHistory() {
         setError("Failed to load order history. Check backend connection.");
         setLoading(false);
       });
-  }, []);
+  }, [user]);
 
   if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading Order History...</div>;
   if (error) return <div style={{ color: 'red', textAlign: 'center', marginTop: '50px' }}>ERROR: {error}</div>;
 
   return (
     <div style={containerStyle}>
-      <h2 style={{ textAlign: 'center', color: '#282c34' }}>Order History (Customer ID: {DEMO_CUSTOMER_ID})</h2>
+      <h2 style={{ textAlign: 'center', color: '#282c34' }}>Order History (Customer ID: {user && user.customerId})</h2>
       <p style={{ textAlign: 'center', color: '#555' }}>
-        Demonstration of transactional history retrieval (essential feature).
+        Only your orders are shown below.
       </p>
 
       {orders.length === 0 ? (
