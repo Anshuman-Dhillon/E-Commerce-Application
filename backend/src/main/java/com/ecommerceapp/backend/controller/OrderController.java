@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerceapp.backend.model.Orders;
 import com.ecommerceapp.backend.repository.OrderRepository;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -70,6 +72,21 @@ public class OrderController {
             public Long productId;
             public Integer quantity;
         }
+    }
+    
+    /**
+     * Allow a customer to cancel (delete) their own order.
+     */
+    @DeleteMapping("/{orderId}/customer/{customerId}")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId, @PathVariable Long customerId) {
+        Optional<Orders> opt = orderRepository.findByOrderIdAndCustomerId(orderId, customerId);
+        if (!opt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("Order not found or does not belong to this customer");
+        }
+        Orders order = opt.get();
+        orderRepository.delete(order);
+        return ResponseEntity.ok().body("Order cancelled");
     }
     
 }

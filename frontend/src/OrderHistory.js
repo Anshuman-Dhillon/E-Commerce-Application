@@ -24,6 +24,25 @@ function OrderHistory({ user }) {
       });
   }, [user]);
 
+  // Cancel an order (customer may only cancel their own order)
+  const handleCancel = async (orderId) => {
+    if (!user || !user.customerId) return;
+    const confirmed = window.confirm('Are you sure you want to cancel this order?');
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}/customer/${user.customerId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+      // remove from UI
+      setOrders(prev => prev.filter(o => o.orderId !== orderId));
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+      setError('Failed to cancel order. ' + (err.message || ''));
+    }
+  };
+
   if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading Order History...</div>;
   if (error) return <div style={{ color: 'red', textAlign: 'center', marginTop: '50px' }}>ERROR: {error}</div>;
 
@@ -45,6 +64,7 @@ function OrderHistory({ user }) {
                       <th style={thStyle}>Status</th>
                       <th style={thStyle}>Amount</th>
                       <th style={thStyle}>Customer ID</th>
+                    <th style={thStyle}>Actions</th>
                   </tr>
               </thead>
               <tbody>
@@ -55,6 +75,11 @@ function OrderHistory({ user }) {
                           <td style={tdStyle}>{order.orderStatus}</td>
                           <td style={tdStyle}>${order.orderAmount.toFixed(2)}</td>
                           <td style={tdStyle}>{order.customerId}</td>
+                        <td style={tdStyle}>
+                          {user && user.customerId === order.customerId ? (
+                            <button onClick={() => handleCancel(order.orderId)} style={{padding: '6px 10px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                          ) : null}
+                        </td>
                       </tr>
                   ))}
               </tbody>
