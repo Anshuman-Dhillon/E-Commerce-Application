@@ -2,6 +2,7 @@ package com.ecommerceapp.backend.controller;
 
 import java.util.Date;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerceapp.backend.model.Orders;
+import com.ecommerceapp.backend.model.Product;
 import com.ecommerceapp.backend.repository.OrderRepository;
+import com.ecommerceapp.backend.repository.ProductRepository;
 import java.util.Optional;
 
 @RestController
@@ -24,9 +27,11 @@ import java.util.Optional;
 public class OrderController {
 
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
 
-    public OrderController(OrderRepository orderRepository) {
+    public OrderController(OrderRepository orderRepository, ProductRepository productRepository) {
         this.orderRepository = orderRepository;
+        this.productRepository = productRepository;
     }
 
     /**
@@ -42,6 +47,7 @@ public class OrderController {
      * Create a new order for a customer
      */
     @PostMapping("")
+    @Transactional
     public ResponseEntity<?> createOrder(@RequestBody OrderPayload payload) {
         if (payload == null || payload.customerId == null || payload.orderAmount == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing order data");
@@ -59,6 +65,25 @@ public class OrderController {
         order.setOrderStatus(payload.orderStatus != null ? payload.orderStatus : "Processing");
         order.setOrderDate(new Date());
         orderRepository.save(order);
+        // If items are provided, decrement stock for each product
+        if (payload.items != null) {
+            for (OrderPayload.Item it : payload.items) {
+                if (it == null || it.productId == null || it.quantity == null) continue;
+                Optional<Product> pop = productRepository.findById(it.productId);
+                if (!pop.isPresent()) {
+                    throw new IllegalArgumentException("Product not found: " + it.productId);
+                }
+                Product p = pop.get();
+                Integer current = p.getStock() == null ? 0 : p.getStock();
+                System.out.println("DEBUG: Product " + it.productId + " current stock: " + current); // ADD THIS
+                if (current < it.quantity) {
+                    throw new IllegalArgumentException("Insufficient stock for product " + it.productId);
+                }
+                p.setStock(current - it.quantity);
+                System.out.println("DEBUG: Product " + it.productId + " new stock: " + p.getStock()); // ADD THIS
+                productRepository.save(p);
+            }
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(order);
     }
 

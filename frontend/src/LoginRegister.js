@@ -1,4 +1,3 @@
-// src/LoginRegister.js
 import React, { useState } from 'react';
 import { fetchReportData } from './api';
 

@@ -8,6 +8,8 @@ function ProductList({ addToCart, user }) {
   useEffect(() => {
     fetchReportData('/api/products')
       .then(data => {
+        console.log('Products received:', data);
+        console.log('First product stock:', data[0]?.stock);
         if (Array.isArray(data)) { 
             setProducts(data);
         } else {
@@ -20,6 +22,20 @@ function ProductList({ addToCart, user }) {
         setProducts([]);
         setLoading(false);
       });
+    // listen for external refresh requests (e.g. after checkout)
+    const onProductsChanged = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchReportData('/api/products');
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error('Failed refreshing products:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    window.addEventListener('productsChanged', onProductsChanged);
+    return () => window.removeEventListener('productsChanged', onProductsChanged);
   }, []);
 
   if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading Products...</div>;
