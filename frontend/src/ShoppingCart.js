@@ -42,6 +42,8 @@ function ShoppingCart({ cartItems, setCartItems, user }) {
                 body: JSON.stringify(orderPayload),
             });
             setCartItems([]);
+            // notify other parts of the app that products may have changed (stock updated)
+            try { window.dispatchEvent(new Event('productsChanged')); } catch(e) { /* ignore */ }
             navigate('/orders');
         } catch (err) {
             alert('Failed to place order. Try again.');
