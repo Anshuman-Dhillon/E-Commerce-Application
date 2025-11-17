@@ -33,6 +33,8 @@ spring.datasource.username=YOUR_USERNAME
 spring.datasource.password=YOUR_PASSWORD
 ```
 
+This will connect to the oracle database. Make sure you use your CS username and password (same as what you'd use when opening Oracle SQL Developer). OpenVPN must be ON for the connection to be established.
+
 ### 5. Run Application
 
 **Terminal 1 - Backend:**
