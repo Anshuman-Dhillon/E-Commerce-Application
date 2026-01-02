@@ -1,4 +1,4 @@
-# E-Commerce Application
+# 3D Model Store
 
 A full-stack 3D model marketplace where creators can upload and sell 3D models, and buyers can browse, purchase, and download digital assets.
 
