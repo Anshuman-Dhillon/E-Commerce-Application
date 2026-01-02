@@ -13,6 +13,8 @@ function ProductList({ addToCart, user }) {
   useEffect(() => {
     fetchReportData('http://localhost:8080/api/products')
       .then(data => {
+        console.log('Products received:', data);
+        console.log('First product stock:', data[0]?.stock);
         if (Array.isArray(data)) { 
           setProducts(data);
           setFilteredProducts(data);

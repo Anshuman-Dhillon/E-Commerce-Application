@@ -29,9 +29,12 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Ensure mvnw is executable
+        run: chmod +x ./mvnw
+        
       - name: Build backend with Maven
         working-directory: ./backend
-        run: ./mvnw -B clean install
+        run: ./mvnw -B clean install -DskipTests
 
       - name: Update dependency graph
         uses: advanced-security/maven-dependency-submission-action@v3

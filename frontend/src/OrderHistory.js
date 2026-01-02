@@ -50,6 +50,25 @@ function OrderHistory({ user }) {
     loadOrders();
   }, [user]);
 
+  // Cancel an order (customer may only cancel their own order)
+  const handleCancel = async (orderId) => {
+    if (!user || !user.customerId) return;
+    const confirmed = window.confirm('Are you sure you want to cancel this order?');
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}/customer/${user.customerId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+      // remove from UI
+      setOrders(prev => prev.filter(o => o.orderId !== orderId));
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+      setError('Failed to cancel order. ' + (err.message || ''));
+    }
+  };
+
   if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading Order History...</div>;
   
   if (error) {

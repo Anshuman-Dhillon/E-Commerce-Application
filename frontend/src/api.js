@@ -1,4 +1,3 @@
-// src/api.js
 // Utility function for fetching data from the Java API with error handling
 
 const API_BASE_URL = 'http://localhost:8080';
