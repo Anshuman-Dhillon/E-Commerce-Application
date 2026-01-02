@@ -1,11 +1,13 @@
 package com.ecommerceapp.backend.controller;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,79 +17,113 @@ import com.ecommerceapp.backend.dto.LoginRequest;
 import com.ecommerceapp.backend.dto.RegisterRequest;
 import com.ecommerceapp.backend.model.Customer;
 import com.ecommerceapp.backend.repository.CustomerRepository;
+import com.ecommerceapp.backend.security.JwtUtil;
 
 @RestController
 @RequestMapping("/api/customers")
-@CrossOrigin(origins = "http://localhost:3000") 
+@CrossOrigin(origins = "http://localhost:3000")
 public class CustomerController {
-
     private final CustomerRepository customerRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
+    private static final int MIN_PASSWORD_LENGTH = 8;
 
-    public CustomerController(CustomerRepository customerRepository) {
+    public CustomerController(CustomerRepository customerRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.customerRepository = customerRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * Login endpoint: Check if email + password match in DB
-     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        Optional<Customer> customer = customerRepository.findByEmail(request.getEmail());
+        System.out.println("Login attempt for email: " + request.getEmail());
+        
+        if (!isValidEmail(request.getEmail())) {
+            return ResponseEntity.badRequest().body("Invalid email format");
+        }
+
+        Optional<Customer> customer = customerRepository.findByEmail(request.getEmail().trim());
 
         if (customer.isPresent()) {
-            // Check if password matches
-            if (customer.get().getPassword().equals(request.getPassword())) {
-                return ResponseEntity.ok(customer.get());
+            Customer user = customer.get();
+            
+            // Only accept BCrypt hashed passwords for security
+            if (user.getPassword() == null || !user.getPassword().startsWith("$2")) {
+                return ResponseEntity.status(401).body("Invalid credentials. Please reset your password.");
+            }
+            
+            boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPassword());
+            
+            if (passwordMatches) {
+                // Generate proper JWT token
+                String token = jwtUtil.generateToken(user.getEmail(), user.getCustomerId());
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", token);
+                response.put("customer", user);
+                return ResponseEntity.ok(response);
             } else {
-                return ResponseEntity.status(401).body("Invalid email or password.");
+                System.out.println("Password mismatch!");
             }
         } else {
-            return ResponseEntity.status(404).body("User not found. Please register first.");
+            System.out.println("Customer not found for email: " + request.getEmail());
         }
+        
+        return ResponseEntity.status(401).body("Invalid credentials");
     }
 
-    /**
-     * Register endpoint: Check if user exists. If not, create new customer.
-     */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        // Check if email already exists
-        if (customerRepository.existsByEmail(request.getEmail())) {
-            return ResponseEntity.status(409).body("Email already in use. Please log in.");
+        String email = request.getEmail().trim();
+        String name = request.getName().trim();
+        String password = request.getPassword();
+        String role = request.getRole() != null ? request.getRole().toUpperCase() : "BUYER";
+        
+        System.out.println("Registration attempt - Email: " + email + ", Role: " + role);
+        
+        if (!isValidEmail(email)) {
+            return ResponseEntity.badRequest().body("Invalid email format");
+        }
+        
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.badRequest().body("Password must be at least " + MIN_PASSWORD_LENGTH + " characters");
+        }
+        
+        if (!role.equals("BUYER") && !role.equals("CREATOR")) {
+            return ResponseEntity.badRequest().body("Invalid role. Must be BUYER or CREATOR");
         }
 
-        // Create new customer
-        Customer newCustomer = new Customer(request.getName(), request.getEmail(), request.getPassword());
+        if (customerRepository.existsByEmail(email)) {
+            return ResponseEntity.status(409).body("Email already in use");
+        }
 
-        // Assign a new customerId if the table doesn't generate one automatically.
-        // This avoids inserting a NULL id which causes an Internal Server Error.
+        String hashedPassword = passwordEncoder.encode(password);
+        System.out.println("Hashed password: " + hashedPassword);
+        
+        Customer newCustomer = new Customer(name, email, hashedPassword);
+        newCustomer.setUserRole(role);
+        
         Optional<Customer> top = customerRepository.findTopByOrderByCustomerIdDesc();
-        Long nextId = 1L;
-        if (top.isPresent() && top.get().getCustomerId() != null) {
-            nextId = top.get().getCustomerId() + 1L;
-        }
+        Long nextId = top.isPresent() && top.get().getCustomerId() != null ? 
+                      top.get().getCustomerId() + 1L : 1L;
         newCustomer.setCustomerId(nextId);
-
-        // Ensure NOT NULL columns in DB receive a valid value
-        newCustomer.setStreetName("Unknown");
-        newCustomer.setCity("Unknown");
+        newCustomer.setStreetName("Not provided");
+        newCustomer.setCity("Not provided");
 
         Customer saved = customerRepository.save(newCustomer);
-
-        return ResponseEntity.status(201).body(saved);
+        
+        // Generate proper JWT token
+        String token = jwtUtil.generateToken(saved.getEmail(), saved.getCustomerId());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("customer", saved);
+        return ResponseEntity.status(201).body(response);
     }
 
-    /**
-     * Get customer by ID (legacy endpoint, kept for compatibility)
-     */
-    @GetMapping("/login/{customerId}")
-    public ResponseEntity<?> loginById(@PathVariable Long customerId) {
-        Optional<Customer> customer = customerRepository.findById(customerId);
-
-        if (customer.isPresent()) {
-            return ResponseEntity.ok(customer.get());
-        } else {
-            return ResponseEntity.status(404).body("Customer ID " + customerId + " not found.");
-        }
+    private boolean isValidEmail(String email) {
+        return email != null && EMAIL_PATTERN.matcher(email).matches();
     }
 }
