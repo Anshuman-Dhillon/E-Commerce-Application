@@ -2,10 +2,10 @@
 
 A full-stack 3D model marketplace where creators can upload and sell 3D models, and buyers can browse, purchase, and download digital assets.
 
-![E-Commerce Application Screenshot](./screenshot.png)
+![3D Model Marketplace Application Screenshot](demo/image.png)
 
 ## 📹 Demo Video
-[Watch the demo on YouTube](https://www.youtube.com/your-video-link)
+[Watch the demo on YouTube](https://youtu.be/QwUyIbf_rwI)
 
 It started out as an group academic project for one of my courses, but then I extended it further to turn it into a proper full-stack application. Connected to AWS S3 for cloud storage (the 3D models and thumbnails) and Oracle SQL Developer for data storage.
 
