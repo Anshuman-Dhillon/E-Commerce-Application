@@ -23,7 +23,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin(origins = "http://localhost:3000") 
+@CrossOrigin(origins = "http://localhost:3000")
 public class OrderController {
 
     private final OrderRepository orderRepository;
@@ -34,26 +34,19 @@ public class OrderController {
         this.productRepository = productRepository;
     }
 
-    /**
-     * Orders: Transaction History 
-     */
     @GetMapping("/history/{customerId}")
-    public List<Orders> getOrderHistory(@PathVariable Long customerId) {
-        //provides the Orders/Transaction History by Customer ID.
-        return orderRepository.findByCustomerIdOrderByOrderDateDesc(customerId);
+    public ResponseEntity<?> getOrderHistory(@PathVariable Long customerId) {
+        return ResponseEntity.ok(orderRepository.findByCustomerIdOrderByOrderDateDesc(customerId));
     }
 
-    /**
-     * Create a new order for a customer
-     */
     @PostMapping("")
     @Transactional
     public ResponseEntity<?> createOrder(@RequestBody OrderPayload payload) {
         if (payload == null || payload.customerId == null || payload.orderAmount == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing order data");
         }
+        
         Orders order = new Orders();
-        // Assign next orderId
         Long nextOrderId = 1L;
         Orders top = orderRepository.findTopByOrderByOrderIdDesc();
         if (top != null && top.getOrderId() != null) {
@@ -65,7 +58,7 @@ public class OrderController {
         order.setOrderStatus(payload.orderStatus != null ? payload.orderStatus : "Processing");
         order.setOrderDate(new Date());
         orderRepository.save(order);
-        // If items are provided, decrement stock for each product
+        
         if (payload.items != null) {
             for (OrderPayload.Item it : payload.items) {
                 if (it == null || it.productId == null || it.quantity == null) continue;
@@ -75,19 +68,16 @@ public class OrderController {
                 }
                 Product p = pop.get();
                 Integer current = p.getStock() == null ? 0 : p.getStock();
-                System.out.println("DEBUG: Product " + it.productId + " current stock: " + current); // ADD THIS
                 if (current < it.quantity) {
                     throw new IllegalArgumentException("Insufficient stock for product " + it.productId);
                 }
                 p.setStock(current - it.quantity);
-                System.out.println("DEBUG: Product " + it.productId + " new stock: " + p.getStock()); // ADD THIS
                 productRepository.save(p);
             }
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(order);
     }
 
-    // DTO for order creation
     public static class OrderPayload {
         public Long customerId;
         public Double orderAmount;
@@ -99,9 +89,6 @@ public class OrderController {
         }
     }
     
-    /**
-     * Allow a customer to cancel (delete) their own order.
-     */
     @DeleteMapping("/{orderId}/customer/{customerId}")
     public ResponseEntity<?> cancelOrder(@PathVariable Long orderId, @PathVariable Long customerId) {
         Optional<Orders> opt = orderRepository.findByOrderIdAndCustomerId(orderId, customerId);
@@ -113,5 +100,4 @@ public class OrderController {
         orderRepository.delete(order);
         return ResponseEntity.ok().body("Order cancelled");
     }
-    
 }
